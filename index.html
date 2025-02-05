@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en-US">
+<head>
+    <meta charset="utf-8">
+    <title>Seattle Neighborhoods and Traffic Circles</title>
+    <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no">
+    <link href="https://api.mapbox.com/mapbox-gl-js/v2.5.0/mapbox-gl.css" rel="stylesheet">
+    <script src="https://api.mapbox.com/mapbox-gl-js/v2.5.0/mapbox-gl.js"></script>
+    <style>
+    
+    body { margin: 0; padding: 0; }
+    
+    html, body {
+        overflow: hidden;  
+        height: 100%; 
+    }
+    
+
+    #map {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+    }
+    
+    
+    #side-panel {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        width: 300px;
+        height: auto;
+        background: white;
+        padding: 10px;
+        overflow-y: auto; 
+        max-height: 90vh; 
+        box-shadow: 2px 2px 10px rgba(0,0,0,0.3);
+        z-index: 1000;
+    }
+    
+    
+    @media (max-width: 1024px) {
+        #side-panel {
+            display: none;
+        }
+    }
+    
+    
+    table { width: 100%; border-collapse: collapse; }
+    th, td { border: 1px solid black; padding: 8px; text-align: left; }
+    th { background-color: #f4f4f4; }
+
+
+        
+
+    </style>
+</head>
+<body>
+    <main id="container">
+
+        <div id="side-panel">
+            <h2>Seattle Neighborhoods and Traffic Circles</h2>
+            <button onclick="sortTable()">Sort by Name</button>
+            <table id="data-table">
+                <tr><th>Name</th><th>Type</th></tr>
+            </table>
+        </div>
+
+        <div id="map"></div>
+    </main>
+
+    <script>
+        mapboxgl.accessToken = 'pk.eyJ1IjoiaGFydTAwMDAwIiwiYSI6ImNtNnByMWg1azBtM2EyanB5d3p3OGw2OG8ifQ.g6wqR6j807Is4a1vwSLjEg';
+
+        const map = new mapboxgl.Map({
+            container: 'map',
+            style: 'mapbox://styles/mapbox/light-v10', 
+            center: [-122.3351, 47.6080],  
+            zoom: 11
+        });
+
+        async function geojsonFetch() {
+            let response, neighborhoods, trafficCircles;
+
+            response = await fetch('assets/neighborhoods.geojson'); 
+            neighborhoods = await response.json();
+            response = await fetch('assets/Traffic_Circles.geojson'); 
+            trafficCircles = await response.json();
+
+            map.on('load', () => {
+                map.addSource('neighborhoods', { type: 'geojson', data: neighborhoods });
+                map.addLayer({
+                    id: 'neighborhoods-layer',
+                    type: 'fill',
+                    source: 'neighborhoods',
+                    paint: {
+                        'fill-color': '#0080ff',
+                        'fill-opacity': 0.5
+                    }
+                });
+
+                map.addSource('trafficCircles', { type: 'geojson', data: trafficCircles });
+                map.addLayer({
+                    id: 'trafficCircles-layer',
+                    type: 'circle',
+                    source: 'trafficCircles',
+                    paint: {
+                        'circle-radius': 6,
+                        'circle-color': '#FF5733',
+                        'circle-opacity': 0.7
+                    }
+                });
+
+
+                let table = document.getElementById("data-table");
+
+                neighborhoods.features.forEach(feature => {
+                    let row = table.insertRow(-1);
+                    row.insertCell(0).innerHTML = feature.properties.name || "Unknown";
+                    row.insertCell(1).innerHTML = "Neighborhood";
+                });
+
+                trafficCircles.features.forEach(feature => {
+                    let row = table.insertRow(-1);
+                    row.insertCell(0).innerHTML = feature.properties.name || "Unknown";
+                    row.insertCell(1).innerHTML = "Traffic Circle";
+                });
+            });
+        }
+
+        geojsonFetch();
+
+        function sortTable() {
+            let table, rows, switching, i, x, y, shouldSwitch;
+            table = document.getElementById("data-table");
+            switching = true;
+
+            while (switching) {
+                switching = false;
+                rows = table.rows;
+
+                for (i = 1; i < rows.length - 1; i++) {
+                    shouldSwitch = false;
+                    x = rows[i].getElementsByTagName("td")[0].innerHTML.toLowerCase();
+                    y = rows[i + 1].getElementsByTagName("td")[0].innerHTML.toLowerCase();
+
+                    if (x.localeCompare(y) > 0) {
+                        shouldSwitch = true;
+                        break;
+                    }
+                }
+                if (shouldSwitch) {
+                    rows[i].parentNode.insertBefore(rows[i + 1], rows[i]);
+                    switching = true;
+                }
+            }
+        }
+    </script>
+</body>
+</html> 
